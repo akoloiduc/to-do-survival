@@ -22,6 +22,7 @@ let currentTool = 'sword';
 let mouseX = 0, mouseY = 0;
 // Survival timer
 let survivalStartTime = null;
+
 // ═══ SECTION 3: UTILITY FUNCTIONS ═════════════════════════════════════
 
 function getSurvivalSeconds() { 
@@ -61,7 +62,8 @@ for(let i=0; i<80; i++){
 }
 
 // ═══ SECTION 5: DAY/NIGHT CYCLE MANAGEMENT ═════════════════════════
-const DAY_MS=5*60*1000, NIGHT_MS=5*60*1000, CYCLE_MS=DAY_MS+NIGHT_MS;
+// Ban đêm: 5 phút 15 giây
+const DAY_MS=5*60*1000, NIGHT_MS=5*60*1000 + 15*1000, CYCLE_MS=DAY_MS+NIGHT_MS;
 const dayNight={
   startTime:Date.now(), isNight:false, progress:0,
   update(){
@@ -91,14 +93,48 @@ class Particle{
   draw(){ctx.globalAlpha=this.life/this.maxLife;ctx.fillStyle=this.color;ctx.fillRect(this.x,this.y,this.size,this.size);ctx.globalAlpha=1;}
 }
 
-class Bullet{
-  constructor(x,y,target,dmg){ this.x=x;this.y=y;this.target=target;this.dmg=dmg; this.speed=10;this.life=100;this.maxLife=100;this.dead=false; }
-  update(){
-    if(this.dead){this.life=0;return;} if(!this.target||this.target.health<=0){this.dead=true;this.life=0;return;}
-    const dx=this.target.x+this.target.width/2-this.x,dy=this.target.y+this.target.height/2-this.y, d=Math.hypot(dx,dy)||1; this.x+=dx/d*this.speed; this.y+=dy/d*this.speed; this.life--;
-    if(d<15){ if(this.target.takeDamage(this.dmg)){ const idx=zombies.indexOf(this.target); if(idx>=0){zombies.splice(idx,1);score+=10;} } this.dead=true;this.life=0; }
+class Bullet {
+  constructor(x, y, target, dmg) {
+    this.x = x;
+    this.y = y;
+    this.target = target;
+    this.dmg = dmg;
+    this.speed = 10;
+    this.life = 100;
+    this.maxLife = 100;
+    this.dead = false;
   }
-  draw(){ if(this.dead)return; ctx.fillStyle='#ffcc00'; ctx.fillRect(this.x-3,this.y-3,6,6); ctx.fillStyle='#fff'; ctx.fillRect(this.x-1,this.y-1,2,2); }
+  update() {
+    if (this.dead) { this.life = 0; return; }
+    if (!this.target || this.target.health <= 0) { this.dead = true; this.life = 0; return; }
+
+    // Di chuyển về phía mục tiêu
+    const dx = this.target.x + this.target.width / 2 - this.x;
+    const dy = this.target.y + this.target.height / 2 - this.y;
+    const d = Math.hypot(dx, dy) || 1;
+    this.x += (dx / d) * this.speed;
+    this.y += (dy / d) * this.speed;
+    this.life--;
+
+    // Khi khoảng cách đủ gần => gây sát thương và chết
+    if (d < 15) {
+      if (this.target.takeDamage(this.dmg)) zombieDeath(this.target);
+      this.dead = true;
+      this.life = 0;
+    }
+    // Hết tuổi thọ => chết
+    if (this.life <= 0) {
+      this.dead = true;
+      this.life = 0;
+    }
+  }
+  draw() {
+    if (this.dead) return;
+    ctx.fillStyle = '#ffcc00';
+    ctx.fillRect(this.x - 3, this.y - 3, 6, 6);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(this.x - 1, this.y - 1, 2, 2);
+  }
 }
 
 // ═══ SECTION 7: FOOD SYSTEM ════════════════════════════════════════
@@ -151,7 +187,7 @@ const shelter={
     if(this.hitTimer>0) this.hitTimer--;
     for(let i=zombies.length-1;i>=0;i--){
       const z=zombies[i]; if(!this.col(z))continue; this.pushOut(z); this.health=Math.max(0,this.health-z.damage*0.01*this.damageReduction); this.hitTimer = 5;
-      if(this.hasTrap&&z.takeDamage(this.trapDamage)){zombies.splice(i,1);score+=10;}
+      if(this.hasTrap&&z.takeDamage(this.trapDamage)) zombieDeath(z);
     }
   },
   pushOut(z){const dx=z.x+z.width/2-(this.x+this.width/2),dy=z.y+z.height/2-(this.y+this.height/2),d=Math.hypot(dx,dy)||1;z.x+=(dx/d)*3;z.y+=(dy/d)*3;},
@@ -289,6 +325,7 @@ const player={
     const cx=this.x+this.width/2,cy=this.y+this.height/2;
     sw.angle=Math.atan2(my-cy,mx-cx)-Math.PI*0.5; sw.totalSwing=0; sw.swinging=true; sw.hitSet.clear();
   },
+  // ĐÃ SỬA LỖI DẤU NGOẶC Ở ĐÂY
   _hitCheckAoE(){
     const sw = this.sword; const cx = this.x + this.width/2, cy = this.y + this.height/2;
     const hitLogic = (obj, idPrefix) => {
@@ -302,14 +339,23 @@ const player={
           if(obj.type === 'tree') dmg = currentTool === 'axe' ? 15 + player.tools.axe * 15 : 2;
           else if(obj.type === 'rock' || obj.type === 'ore') dmg = currentTool === 'pickaxe' ? 15 + player.tools.pickaxe * 15 : 2;
         }
-        if(obj.takeDamage(dmg)){ 
-          if(obj instanceof Zombie) { score+=obj.isBoss?50:10; const idx=zombies.indexOf(obj); if(idx>-1) zombies.splice(idx,1); }
-          else if(obj instanceof Animal) { score+=5; const idx=animals.indexOf(obj); if(idx>-1) animals.splice(idx,1); }
-          else if(obj instanceof ResourceNode) { const idx=resourceNodes.indexOf(obj); if(idx>-1) resourceNodes.splice(idx,1); }
+        if(obj.takeDamage(dmg)){
+          if(obj instanceof Zombie) { zombieDeath(obj); }
+          else if(obj instanceof Animal) { 
+            score+=5; 
+            const idx=animals.indexOf(obj); 
+            if(idx>-1) animals.splice(idx,1); 
+          }
+          else if(obj instanceof ResourceNode) { 
+            const idx=resourceNodes.indexOf(obj); 
+            if(idx>-1) resourceNodes.splice(idx,1); 
+          }
         }
       }
     };
-    zombies.forEach((z,i) => hitLogic(z, 'z'+i)); animals.forEach((a,i) => hitLogic(a, 'a'+i)); resourceNodes.forEach((n,i) => hitLogic(n, 'n'+i));
+    zombies.forEach((z,i) => hitLogic(z, 'z'+i)); 
+    animals.forEach((a,i) => hitLogic(a, 'a'+i)); 
+    resourceNodes.forEach((n,i) => hitLogic(n, 'n'+i));
   },
   draw(){
     drawShadow(this.x, this.y, this.width, this.height);
@@ -513,6 +559,64 @@ function spawnBoss() {
   spawnParticles(canvas.width/2, canvas.height/2, '#ff0000', 30);
 }
 
+// ── HÀM XỬ LÝ KHI ZOMBIE CHẾT (RƠI VẬT TƯ) ───────────────────────
+function zombieDeath(z) {
+  // Tăng điểm
+  score += z.isBoss ? 50 : 10;
+  
+  // Xác suất rơi đồ
+  const dropChance = z.isBoss ? 1.0 : 0.35; // Boss luôn rơi, thường 35%
+  if (Math.random() < dropChance) {
+    if (z.isBoss) {
+      // Boss rơi nhiều loại tài nguyên
+      const loots = [
+        { type: 'wood', min: 5, max: 10, icon: '🪵', color: '#e6994c' },
+        { type: 'stone', min: 5, max: 10, icon: '🪨', color: '#b3b3b3' },
+        { type: 'metal', min: 3, max: 7, icon: '⚙️', color: '#66e0ff' }
+      ];
+      // Chọn ngẫu nhiên 2 loại để rơi
+      const selected = loots.sort(() => 0.5 - Math.random()).slice(0, 2);
+      selected.forEach(loot => {
+        const amount = Math.floor(Math.random() * (loot.max - loot.min + 1)) + loot.min;
+        playerResources[loot.type] += amount;
+        spawnText(z.x + z.width/2, z.y - 5, `+${amount} ${loot.icon}`, loot.color);
+      });
+      // Luôn rơi 2-3 thịt
+      const meatCount = 2 + Math.floor(Math.random() * 2);
+      for (let i = 0; i < meatCount; i++) {
+        meatItems.push(new MeatItem(z.x + Math.random()*z.width, z.y + Math.random()*z.height));
+      }
+      spawnText(z.x + z.width/2, z.y + z.height/2, `+${meatCount} 🥩`, '#ff7777');
+    } else {
+      // Zombie thường rơi 1 loại ngẫu nhiên
+      const lootType = Math.random();
+      if (lootType < 0.25) { // Gỗ
+        const amount = 1 + Math.floor(Math.random() * 3); // 1-3
+        playerResources.wood += amount;
+        spawnText(z.x + z.width/2, z.y - 5, `+${amount} 🪵`, '#e6994c');
+      } else if (lootType < 0.5) { // Đá
+        const amount = 1 + Math.floor(Math.random() * 3);
+        playerResources.stone += amount;
+        spawnText(z.x + z.width/2, z.y - 5, `+${amount} 🪨`, '#b3b3b3');
+      } else if (lootType < 0.75) { // Kim loại
+        const amount = 1 + Math.floor(Math.random() * 2);
+        playerResources.metal += amount;
+        spawnText(z.x + z.width/2, z.y - 5, `+${amount} ⚙️`, '#66e0ff');
+      } else { // Thịt
+        meatItems.push(new MeatItem(z.x + z.width/2, z.y + z.height/2));
+        spawnText(z.x + z.width/2, z.y - 5, `+1 🥩`, '#ff7777');
+      }
+    }
+  }
+  
+  // Hiệu ứng hạt khi chết
+  spawnParticles(z.x + z.width/2, z.y + z.height/2, z.isBoss ? '#ff0000' : '#880000', z.isBoss ? 20 : 10, true);
+  
+  // Xóa zombie khỏi mảng
+  const idx = zombies.indexOf(z);
+  if (idx >= 0) zombies.splice(idx, 1);
+}
+
 // ═══ SECTION 13: STRUCTURES & BUILDINGS ════════════════════════════
 
 // ── CÔNG TRÌNH ────────────────────────────────────────────────────
@@ -708,7 +812,7 @@ function update(){
 
   player.handleInput();player.update();shelter.update();
   for(let i=structures.length-1;i>=0;i--){ structures[i].update();if(structures[i].isDestroyed()){structures.splice(i,1);} }
-  for(let i=zombies.length-1;i>=0;i--){ const z=zombies[i];z.update(); if(z.col(player)&&z.attackCooldown===0){player.takeDamage(z.damage);z.attackCooldown=60;} if(z.health<=0){zombies.splice(i,1);score+=z.isBoss?50:10;} }
+  for(let i=zombies.length-1;i>=0;i--){ const z=zombies[i];z.update(); if(z.col(player)&&z.attackCooldown===0){player.takeDamage(z.damage);z.attackCooldown=60;} if(z.health<=0) zombieDeath(z);}
   for(let i=animals.length-1;i>=0;i--){ animals[i].update(); }
 
   for(let i=meatItems.length-1;i>=0;i--){
