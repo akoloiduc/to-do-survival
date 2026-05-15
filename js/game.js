@@ -806,5 +806,15 @@ window.addEventListener('keyup',e=>{keys[e.key]=false;});
 
 // ═══ SECTION 20: INITIALIZATION & START GAME ══════════════════════
 
+// Start game from main menu
+function startGame(){
+  const menu = document.getElementById('mainMenu');
+  if(menu) menu.classList.add('hidden');
+  if(!survivalStartTime) survivalStartTime = Date.now();
+  gameActive = true;
+  refreshCraftBtns(); updateUI();
+}
+
+// Initial content load (keeps world populated so Start resumes immediately)
 spawnAnimals(4); spawnResourceNodes('tree', 7); spawnResourceNodes('rock', 4); spawnResourceNodes('ore', 2);
 refreshCraftBtns(); updateUI(); gameLoop();
