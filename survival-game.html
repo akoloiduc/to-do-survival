@@ -162,69 +162,52 @@ body.is-mobile #desktop-hint { display: none; }
 </div>
 </div>
 <script>
-// ════════════════════════════════════════════════════════════════════════════
-// 🎮 SURVIVAL GAME - Main Game Script
-// ════════════════════════════════════════════════════════════════════════════
-
-// ═══ SECTION 1: SETUP & INITIALIZATION ═══════════════════════════════════
 if ('ontouchstart' in window || navigator.maxTouchPoints > 0) { document.body.classList.add('is-mobile'); }
 const canvas=document.getElementById('gameCanvas');
 const ctx=canvas.getContext('2d');
 canvas.width=800; canvas.height=520; 
 const GRID = 40;
-
-// ═══ SECTION 2: GAME STATE & VARIABLES ═══════════════════════════════════
-// Game objects
+let mouseX = 0, mouseY = 0;
+// ── MEAT SYSTEM ──────────────────────────────────────────────────────
+// meatItems: raw meat drops on the map (player picks up → adds to inventory)
+// playerResources.meat: stored raw meat
+// CookedFood: spawned by foodproc after consuming 1 raw meat
 let meatItems=[], cookedFoods=[], zombies=[], animals=[], resourceNodes=[], structures=[], particles=[], floatingTexts=[], mapDecor=[];
-// Player resources & state
 let playerResources={wood:0,stone:0,metal:0,meat:0};
 let wave=1,score=0,gameActive=true,keys={};
 let lastIsNight=false,spawnTimer=0, frameCount=0;
 let selectedCraft=null, selectedStructure=null;
 let currentTool = 'sword';
-// Input
-let mouseX = 0, mouseY = 0;
-// Survival timer
-let survivalStartTime = null;
-// ═══ SECTION 3: UTILITY FUNCTIONS ═════════════════════════════════════
 
+let survivalStartTime = null;
 function getSurvivalSeconds() { 
   if(!survivalStartTime) return 0;
   return Math.floor((Date.now() - survivalStartTime) / 1000); 
 }
-
 function getSurvivalDisplay() {
   if(!survivalStartTime) return '⏱ --:--';
   const s = getSurvivalSeconds();
   const m = Math.floor(s / 60), sec = s % 60;
   return `⏱ ${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
 }
-
 function getDifficultyMultiplier() {
   const minutes = getSurvivalSeconds() / 60;
   return 1 + minutes * 0.08;
+}
+
+let nightSpawnInterval30s = 0;
+let nightBossInterval60s = 0;
+let bossAlertTimer = 0;
+let lastUpdateTime = Date.now();
+
+for(let i=0; i<80; i++){
+  mapDecor.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, type: Math.random() < 0.8 ? 'grass' : 'flower' });
 }
 
 function drawShadow(x, y, w, h) {
   ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(x + w/2, y + h - 2, w/1.5, h/4, 0, 0, Math.PI*2); ctx.fill();
 }
 
-function spawnText(x, y, txt, col) { floatingTexts.push(new FloatingText(x, y, txt, col)); }
-
-function spawnParticles(x,y,col,n=6, isBlood=false){for(let i=0;i<n;i++)particles.push(new Particle(x,y,col, isBlood));}
-
-// ═══ SECTION 4: TIMING & ENVIRONMENTAL STATE ════════════════════════
-let nightSpawnInterval30s = 0;
-let nightBossInterval60s = 0;
-let bossAlertTimer = 0;
-let lastUpdateTime = Date.now();
-
-// Initialize map decorations
-for(let i=0; i<80; i++){
-  mapDecor.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, type: Math.random() < 0.8 ? 'grass' : 'flower' });
-}
-
-// ═══ SECTION 5: DAY/NIGHT CYCLE MANAGEMENT ═════════════════════════
 const DAY_MS=5*60*1000, NIGHT_MS=5*60*1000, CYCLE_MS=DAY_MS+NIGHT_MS;
 const dayNight={
   startTime:Date.now(), isNight:false, progress:0,
@@ -242,18 +225,19 @@ const dayNight={
   }
 };
 
-// ═══ SECTION 6: VISUAL EFFECT CLASSES ══════════════════════════════
 class FloatingText {
   constructor(x, y, text, color) { this.x = x + (Math.random()-0.5)*15; this.y = y; this.text = text; this.color = color; this.life = 45; this.maxLife = 45; this.vy = -1.5 - Math.random(); }
   update() { this.y += this.vy; this.life--; }
   draw() { ctx.save(); ctx.globalAlpha = Math.max(0, this.life / this.maxLife); ctx.font = "bold 14px 'Courier New', monospace"; ctx.textAlign = "center"; ctx.fillStyle = "#000"; ctx.fillText(this.text, this.x+1, this.y+1); ctx.fillText(this.text, this.x-1, this.y-1); ctx.fillStyle = this.color; ctx.fillText(this.text, this.x, this.y); ctx.restore(); }
 }
+function spawnText(x, y, txt, col) { floatingTexts.push(new FloatingText(x, y, txt, col)); }
 
 class Particle{
   constructor(x,y,col,isBlood=false){ this.x=x;this.y=y;this.color=col;this.life=20+Math.random()*15;this.maxLife=this.life; this.vx=(Math.random()-.5)*8;this.vy=(Math.random()-.5)*8 - 2; this.groundY = y + 10 + Math.random()*10; this.size = isBlood ? 3+Math.random()*2 : 4; }
   update(){ this.x+=this.vx; this.y+=this.vy; this.vy += 0.6; if(this.y >= this.groundY) { this.y = this.groundY; this.vy *= -0.4; this.vx *= 0.5; } this.life--; }
   draw(){ctx.globalAlpha=this.life/this.maxLife;ctx.fillStyle=this.color;ctx.fillRect(this.x,this.y,this.size,this.size);ctx.globalAlpha=1;}
 }
+function spawnParticles(x,y,col,n=6, isBlood=false){for(let i=0;i<n;i++)particles.push(new Particle(x,y,col, isBlood));}
 
 class Bullet{
   constructor(x,y,target,dmg){ this.x=x;this.y=y;this.target=target;this.dmg=dmg; this.speed=10;this.life=100;this.maxLife=100;this.dead=false; }
@@ -265,31 +249,32 @@ class Bullet{
   draw(){ if(this.dead)return; ctx.fillStyle='#ffcc00'; ctx.fillRect(this.x-3,this.y-3,6,6); ctx.fillStyle='#fff'; ctx.fillRect(this.x-1,this.y-1,2,2); }
 }
 
-// ═══ SECTION 7: FOOD SYSTEM ════════════════════════════════════════
-
-// Raw meat item - dropped by animals, picked up by player
+// ── RAW MEAT ITEM (rơi từ thú, người chơi đến gần tự nhặt) ───────────
 class MeatItem {
-  constructor(x, y) { this.x=x; this.y=y; this.w=16; this.h=14; this.oy=y; this.life=1200; }
+  constructor(x, y) { this.x=x; this.y=y; this.w=16; this.h=14; this.oy=y; this.life=1200; } // 20s
   update() { this.life--; }
   draw() {
     const bob = Math.sin(frameCount*0.15)*3;
     drawShadow(this.x, this.oy+10, this.w, this.h/2);
+    // Vẽ miếng thịt đỏ hồng
     ctx.fillStyle='#cc3333'; ctx.fillRect(this.x, this.oy+bob, this.w, this.h);
     ctx.fillStyle='#ff6666'; ctx.fillRect(this.x+2, this.oy+bob+2, 8, 4);
     ctx.fillStyle='#ffaaaa'; ctx.fillRect(this.x+4, this.oy+bob+3, 4, 2);
     ctx.strokeStyle='#880000'; ctx.lineWidth=2; ctx.strokeRect(this.x, this.oy+bob, this.w, this.h);
+    // Label
     ctx.fillStyle='#fff'; ctx.font='bold 9px Courier New'; ctx.textAlign='center';
     ctx.fillText('🥩', this.x+this.w/2, this.oy+bob-2);
   }
   col(r){return this.x<r.x+(r.width||r.w||0)&&this.x+this.w>r.x&&this.y<r.y+(r.height||r.h||0)&&this.y+this.h>r.y;}
 }
 
-// Cooked food - creates from foodproc structure, restores hunger
+// ── COOKED FOOD (tạo từ Bếp Nấu, hồi độ đói khi nhặt) ───────────────
 class CookedFood {
   constructor(x, y) { this.x=x; this.y=y; this.w=14; this.h=14; this.oy=y; this.hungerRestore=30; }
   draw() {
     const bob = Math.sin(frameCount*0.2)*3;
     drawShadow(this.x, this.oy+8, this.w, this.h/2);
+    // Đĩa thức ăn chín màu vàng cam
     ctx.fillStyle='#ff8800'; ctx.fillRect(this.x, this.oy+bob, this.w, this.h);
     ctx.fillStyle='#ffcc44'; ctx.fillRect(this.x+3, this.oy+bob+2, 8, 5);
     ctx.fillStyle='#fff8'; ctx.fillRect(this.x+3, this.oy+bob+2, 4, 2);
@@ -297,8 +282,6 @@ class CookedFood {
   }
   col(r){return this.x<r.x+(r.width||r.w||0)&&this.x+this.w>r.x&&this.y<r.y+(r.height||r.h||0)&&this.y+this.h>r.y;}
 }
-
-// ═══ SECTION 8: SHELTER SYSTEM ═════════════════════════════════════
 
 // ── NHÀ CHÍNH ────────────────────────────────────────────────────────
 const shelter={
@@ -393,8 +376,6 @@ function craftPlayerUpgrade(type) {
   } else { spawnText(player.x, player.y, "Thiếu Khoáng!", "#ff3333"); }
 }
 
-// ═══ SECTION 10: MOBILE CONTROLS (JOYSTICK) ════════════════════════
-
 // ── JOYSTICK ──────────────────────────────────────────────────────────
 let joyActive = false, joyDX = 0, joyDY = 0, mobileSprint = false;
 const jZone = document.getElementById('joystick-zone');
@@ -414,8 +395,6 @@ function handleJoy(e) {
 }
 btnSprint.addEventListener('touchstart', e=>{ mobileSprint = true; btnSprint.style.background='rgba(0,255,255,0.6)'; e.preventDefault();});
 btnSprint.addEventListener('touchend', e=>{ mobileSprint = false; btnSprint.style.background='rgba(0,200,255,0.4)'; e.preventDefault();});
-
-// ═══ SECTION 9: PLAYER & UPGRADES ═════════════════════════════════
 
 // ── NGƯỜI CHƠI ────────────────────────────────────────────────────────
 const player={
@@ -516,8 +495,6 @@ const player={
   pickupMeat(m){ playerResources.meat++; spawnParticles(m.x,m.y,'#cc3333',8); spawnText(m.x+8, m.y-5, "+1 Thịt", "#ff7777"); }
 };
 
-// ═══ SECTION 11: ENVIRONMENT (ANIMALS & RESOURCES) ════════════════
-
 // ── ĐỘNG VẬT (KHÔNG hồi đói trực tiếp – rơi thịt sống) ─────────────
 class Animal {
   constructor(x,y) { this.x=x; this.y=y; this.w=24; this.h=24; this.hp=30; this.maxHp=30; this.vx=0; this.vy=0; this.timer=0; this.hitTimer=0;}
@@ -581,12 +558,8 @@ class ResourceNode {
   }
 }
 
-// ═══ SECTION 14: SPAWN & MANAGEMENT FUNCTIONS ══════════════════════
-
 function spawnAnimals(n=1){ for(let i=0;i<n;i++){ let x,y; do{x=30+Math.random()*(canvas.width-60);y=30+Math.random()*(canvas.height-60);}while(x>shelter.x&&x<shelter.x+shelter.width&&y>shelter.y&&y<shelter.y+shelter.height); animals.push(new Animal(x,y)); } }
 function spawnResourceNodes(type, n=1){ for(let i=0;i<n;i++){ let x,y; do{x=30+Math.random()*(canvas.width-60);y=30+Math.random()*(canvas.height-60);}while(x>shelter.x-20&&x<shelter.x+shelter.width+20&&y>shelter.y-20&&y<shelter.y+shelter.height+20); resourceNodes.push(new ResourceNode(x,y,type)); } }
-
-// ═══ SECTION 12: COMBAT (ZOMBIES & BOSS) ══════════════════════════
 
 // ── ZOMBIE & BOSS ─────────────────────────────────────────────────────
 class Zombie{
@@ -679,8 +652,6 @@ function spawnBoss() {
   spawnParticles(canvas.width/2, canvas.height/2, '#ff0000', 30);
 }
 
-// ═══ SECTION 13: STRUCTURES & BUILDINGS ════════════════════════════
-
 // ── CÔNG TRÌNH ────────────────────────────────────────────────────────
 const SDEFS={
   crossbow:{name:'Máy Nỏ',icon:'🏹',w:40,h:40,cost:lv=>({wood:lv*10+5,stone:0,metal:lv*8+2}),color:'#4a2e15',border:'#cc6600',maxLv:3},
@@ -763,8 +734,6 @@ class Structure{
   }
 }
 
-// ═══ SECTION 15: CRAFTING & BUILDING INTERFACE ═════════════════════
-
 function selectCraft(type){ selectedCraft=type; document.querySelectorAll('.craft-btn').forEach(b=>b.style.outline='none'); const btn=document.getElementById('craft-'+type); if(btn)btn.style.outline='2px solid #00ff88'; }
 
 function tryPlaceStructure(gx, gy) {
@@ -817,8 +786,6 @@ function refreshCraftBtns(){
   }
 }
 
-// ═══ SECTION 16: UI & DISPLAY UPDATES ══════════════════════════════
-
 function updateUI(){
   const pct=v=>Math.max(0,Math.min(100,v*100))+'%';
   document.getElementById('healthFill').style.width=pct(player.health/player.maxHealth); document.getElementById('hungerFill').style.width=pct(player.hunger/player.maxHunger); document.getElementById('energyFill').style.width=pct(player.energy/player.maxEnergy);
@@ -854,8 +821,6 @@ function updateNightSpawns(deltaMs) {
   if(nightSpawnInterval30s >= 30000) { nightSpawnInterval30s -= 30000; spawnNightWaveExtra(); }
   if(nightBossInterval60s >= 60000) { nightBossInterval60s -= 60000; spawnBoss(); }
 }
-
-// ═══ SECTION 17: GAME LOOP & UPDATES ═══════════════════════════════
 
 function update(){
   if(!gameActive)return; 
@@ -904,8 +869,6 @@ function update(){
   if(frameCount % 10 === 0) updateUI();
 }
 
-// ═══ SECTION 18: RENDERING & DRAW ═════════════════════════════════
-
 function draw(){
   ctx.fillStyle='#446b33'; ctx.fillRect(0,0,canvas.width,canvas.height);
   ctx.fillStyle='#4c753a'; for(let x=0;x<canvas.width;x+=GRID*2){ for(let y=0;y<canvas.height;y+=GRID*2){ ctx.fillRect(x,y,GRID,GRID); ctx.fillRect(x+GRID,y+GRID,GRID,GRID); } }
@@ -945,8 +908,6 @@ function draw(){
 
 function gameLoop(){update();draw();requestAnimationFrame(gameLoop);}
 
-// ═══ SECTION 19: EVENT LISTENERS & INPUT HANDLING ════════════════
-
 canvas.addEventListener('contextmenu', e => {
   e.preventDefault(); 
   if (selectedCraft) { selectedCraft = null; document.querySelectorAll('.craft-btn').forEach(b => b.style.outline = 'none'); }
@@ -979,7 +940,7 @@ window.addEventListener('keydown',e=>{
   if(e.key==='Escape'){selectedCraft=null;document.querySelectorAll('.craft-btn').forEach(b=>b.style.outline='none');}
 });
 window.addEventListener('keyup',e=>{keys[e.key]=false;});
-
+// ── INIT ──────────────────────────────────────────────────────────────
 spawnAnimals(4); spawnResourceNodes('tree', 7); spawnResourceNodes('rock', 4); spawnResourceNodes('ore', 2);
 refreshCraftBtns(); updateUI(); gameLoop();
 </script>
