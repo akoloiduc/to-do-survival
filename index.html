@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧟 Survival Game - Sinh Tồn</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="wrap">
+        <div id="gameContainer">
+            <div id="canvasWrap">
+                <canvas id="gameCanvas"></canvas>
+                <div id="bossAlert">💀 BOSS XUẤT HIỆN! 💀</div>
+            </div>
+
+            <div id="gameUI">
+                <div id="stats">
+                    <div class="stat">
+                        <span class="label">❤️ HP</span>
+                        <div class="bar" id="healthBarWrap">
+                            <div id="healthFill" class="fill" style="width:100%; background:#ff3333;"></div>
+                        </div>
+                        <span class="val" id="healthValue">100</span>
+                    </div>
+
+                    <div class="stat">
+                        <span class="label">🍖 ĐÓI</span>
+                        <div class="bar">
+                            <div id="hungerFill" class="fill" style="width:100%; background:#ff9900;"></div>
+                        </div>
+                        <span class="val" id="hungerValue">100</span>
+                    </div>
+
+                    <div class="stat">
+                        <span class="label">⚡ SỨC</span>
+                        <div class="bar">
+                            <div id="energyFill" class="fill" style="width:100%; background:#00ccff;"></div>
+                        </div>
+                        <span class="val" id="energyValue">100</span>
+                    </div>
+                </div>
+
+                <div id="infoPanel">
+                    <span id="waveInfo">SÓNG: 0</span>
+                    <span id="zombieCount">ZOMBIE: 0</span>
+                    <span id="shelterHealth">NHÀ: 200/200</span>
+                    <span id="survivalTimer" style="border-radius: 4px; padding: 2px 8px;">⏱ --:--</span>
+                </div>
+
+                <div id="resources">
+                    <span class="r-wood">🪵 Gỗ: <span id="woodCount">0</span></span>
+                    <span class="r-stone">🪨 Đá: <span id="stoneCount">0</span></span>
+                    <span class="r-metal">⚙️ Kim: <span id="metalCount">0</span></span>
+                    <span class="r-meat">🥩 Thịt: <span id="meatCount">0</span></span>
+                </div>
+            </div>
+
+            <div id="hotbar">
+                <button class="tslot active" id="slot-sword" onclick="setTool('sword')">① KIẾM</button>
+                <button class="tslot" id="slot-axe" onclick="setTool('axe')">② RÌU</button>
+                <button class="tslot" id="slot-pickaxe" onclick="setTool('pickaxe')">③ CÚP</button>
+            </div>
+        </div>
+
+        <div id="sidebar">
+            <!-- Shelter Upgrades -->
+            <div class="scard">
+                <h4>🏰 NHÀ CHÍNH</h4>
+                <button id="btn-house" class="craft-btn" onclick="shelterUpgrade('house')">⬆ Cấp Nhà</button>
+                <button id="btn-wall" class="craft-btn" onclick="shelterUpgrade('wall')">🧱 Tường</button>
+                <button id="btn-foundation" class="craft-btn" onclick="shelterUpgrade('foundation')">🛡️ Móng</button>
+                <button id="btn-trap" class="craft-btn" onclick="shelterUpgrade('trap')">⚡ Bẫy</button>
+                <div class="tip">Nâng Cấp nhà để mở công trình mới</div>
+            </div>
+
+            <!-- Player Upgrades -->
+            <div class="scard">
+                <h4>🎖️ VŨ KHÍ & CÔNG CỤ</h4>
+                <button id="craft-sword" class="craft-btn" onclick="craftPlayerUpgrade('sword')">🗡 Kiếm</button>
+                <button id="craft-axe" class="craft-btn" onclick="craftPlayerUpgrade('axe')">🪓 Rìu</button>
+                <button id="craft-pickaxe" class="craft-btn" onclick="craftPlayerUpgrade('pickaxe')">⛏ Cúp</button>
+                <div class="tip">Nâng Cấp để tăng hiệu suất chặt lumberjack.</div>
+            </div>
+
+            <!-- Structures -->
+            <div class="scard">
+                <h4>🔨 CÔNG TRÌNH</h4>
+                <button id="craft-crossbow" class="craft-btn ok" onclick="selectCraft('crossbow')">🏹 Máy Nỏ</button>
+                <button id="craft-wall_s" class="craft-btn ok" onclick="selectCraft('wall_s')">🧱 Tường</button>
+                <button id="craft-foodproc" class="craft-btn ok" onclick="selectCraft('foodproc')">🍳 Bếp Lò</button>
+                <div class="tip">Chọn công trình rồi click trên bản đồ đặt. Right-click hủy.</div>
+            </div>
+
+            <!-- Selected Structure Upgrade -->
+            <div class="scard">
+                <h4>⚙️ CÔNG TRÌNH ĐÃ CHỌN</h4>
+                <div id="structureUpgradeButtons">
+                    <span style="color:#777;font-size:12px;display:block;text-align:center;">Chạm CT trên map để Nâng Cấp</span>
+                </div>
+            </div>
+
+            <!-- Help & Tips -->
+            <div class="scard">
+                <h4>📋 HƯỚNG DẪN</h4>
+                <div class="tip">
+                    <strong>💚 Mục tiêu:</strong> Sinh tồn qua các đêm với zombie<br><br>
+                    <strong>⌨️ Phím:</strong><br>
+                    • W/A/S/D Chuyển động<br>
+                    • Space Chạy (tốn sức)<br>
+                    • Chuột Trái: Tấn công / Đặt công trình<br>
+                    • Chuột Phải: Hủy công trình<br>
+                    • 1/2/3: Đổi vũ khí<br><br>
+                    <strong>📱 Mobile:</strong><br>
+                    • Dùng Joystick trái<br>
+                    • Bấm Sprint bên phải
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Menu Modal -->
+    <div id="mainMenu" class="modal">
+        <div class="modal-content menu-content">
+            <h1 style="font-size: 48px; margin-bottom: 20px; text-shadow: 3px 3px 0 #000;">🧟 SINH TỒN</h1>
+            <p style="font-size: 16px; color: #ffcc44; margin-bottom: 30px; line-height: 1.6;">
+                <strong>Năm 2050:</strong> Virus zombie lây lan khắp thế giới.<br>
+                Bạn là một trong những người sống sót cuối cùng.<br>
+                Hãy xây dựng, chiến đấu và <strong>SINH TỒN</strong> qua từng đêm!
+            </p>
+            <button onclick="startGame()" style="padding: 15px 50px; font-size: 24px; background: #00ff88; color: #000; border: 4px solid #00cc66; margin: 10px 0; cursor: pointer; font-weight: bold; border-radius: 6px;">▶️ BẮT ĐẦU</button>
+            <div class="menu-tips" style="margin-top: 30px; color: #aaa; font-size: 13px; border-top: 2px solid #444; padding-top: 20px;">
+                <strong style="color: #ffcc00;">💡 MẸO:</strong><br>
+                • Thời kỳ ban ngày: Thu thập tài nguyên (gỗ, đá, kim loại)<br>
+                • Thời kỳ ban đêm: Zombie tấn công, chiến đấu và bảo vệ nhà!<br>
+                • Nâng cấp nhà để mở khóa vũ khí và công trình mới<br>
+                • Xây dựng máy nỏ, tường, và bếp lò để tăng sức mạnh
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="gameOver" class="modal hidden">
+        <div class="modal-content">
+            <h1 id="gameOverMsg">GAME OVER</h1>
+            <p id="finalScore">Sinh Tồn Tới Sóng: 0 | Điểm: 0</p>
+            <p id="finalTime">Thời Gian Sinh Tồn: --:--</p>
+            <button onclick="location.reload()">🔄 CHƠI LẠI</button>
+        </div>
+    </div>
+
+    <!-- Mobile Touch Controls -->
+    <div id="joystick-zone">
+        <div id="joystick-knob"></div>
+    </div>
+    <button id="sprint-btn">🏃</button>
+
+    <!-- Main Game Script -->
+    <script src="js/game.js"></script>
+</body>
+</html>

@@ -1,0 +1,533 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   🎮 SURVIVAL GAME - Stylesheet
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ═══ GLOBAL STYLES ════════════════════════════════════════════════════════ */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: 'Courier New', monospace;
+  background: #0d0d15;
+  color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  overflow-y: auto;
+}
+
+/* ═══ LAYOUT ════════════════════════════════════════════════════════════════ */
+#wrap {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 10px;
+  max-width: 100vw;
+}
+
+#gameContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #14141e;
+  border: 4px solid #ff8800;
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+  width: 100%;
+  max-width: 832px;
+}
+
+#canvasWrap {
+  position: relative;
+  width: 100%;
+}
+
+#gameCanvas {
+  display: block;
+  border: 4px solid #222;
+  border-radius: 6px;
+  cursor: crosshair;
+  background: #446b33;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 800 / 520;
+}
+
+/* ═══ UI PANEL ═════════════════════════════════════════════════════════════ */
+#gameUI {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  background: #0a0a10;
+  padding: 10px 15px;
+  border-radius: 6px;
+  border: 2px solid #444;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+#stats {
+  display: flex;
+  gap: 15px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.label {
+  color: #ffcc00;
+  font-size: 14px;
+  font-weight: bold;
+  text-shadow: 2px 2px 0 #000;
+}
+
+.bar {
+  width: 90px;
+  height: 16px;
+  background: #222;
+  border: 2px solid #555;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.bar .fill {
+  height: 100%;
+  transition: width 0.2s;
+}
+
+#healthFill {
+  background: #ff3333;
+}
+
+#hungerFill {
+  background: #ff9900;
+}
+
+#energyFill {
+  background: #00ccff;
+}
+
+.val {
+  font-size: 12px;
+  color: #fff;
+  font-weight: bold;
+  min-width: 50px;
+  text-shadow: 1px 1px 0 #000;
+}
+
+#infoPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: right;
+  font-size: 12px;
+  color: #ffaa00;
+  font-weight: bold;
+}
+
+#resources {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: #222;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 2px solid #555;
+}
+
+.r-wood {
+  color: #e6994c;
+  font-weight: bold;
+}
+
+.r-stone {
+  color: #b3b3b3;
+  font-weight: bold;
+}
+
+.r-metal {
+  color: #66e0ff;
+  font-weight: bold;
+}
+
+.r-meat {
+  color: #ff7777;
+  font-weight: bold;
+}
+
+/* ═══ HOTBAR ═══════════════════════════════════════════════════════════════ */
+#hotbar {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  padding: 8px;
+  background: #0a0a10;
+  border-radius: 6px;
+  border: 2px solid #444;
+  margin-top: -4px;
+  pointer-events: none;
+}
+
+.tslot {
+  background: #222;
+  border: 2px solid #555;
+  color: #aaa;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 13px;
+  transition: all 0.1s;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.tslot.active {
+  border-color: #00ff88;
+  color: #fff;
+  background: #004422;
+  transform: scale(1.05);
+  box-shadow: 0 4px 0 #002211;
+  margin-top: -4px;
+}
+
+/* ═══ MODALS ═══════════════════════════════════════════════════════════════ */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-content {
+  background: #111;
+  border: 4px solid #ff3333;
+  border-radius: 10px;
+  padding: 40px 60px;
+  text-align: center;
+  width: 90%;
+  max-width: 400px;
+}
+
+.modal-content h1 {
+  font-size: 40px;
+  color: #ff3333;
+  margin-bottom: 15px;
+  text-shadow: 3px 3px 0 #660000;
+}
+
+.modal-content button {
+  margin-top: 20px;
+  padding: 12px 35px;
+  font-size: 16px;
+  background: #ff6600;
+  color: #000;
+  border: 4px solid #cc3300;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  font-family: 'Courier New', monospace;
+}
+
+/* ═══ MAIN MENU STYLES ═════════════════════════════════════════════════════ */
+.menu-content {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border: 6px solid #00ff88;
+  max-width: 600px;
+  box-shadow: 0 0 40px rgba(0, 255, 136, 0.3), inset 0 0 20px rgba(0, 255, 136, 0.1);
+}
+
+.menu-content h1 {
+  color: #00ff88;
+  text-shadow: 0 0 20px #00ff88, 3px 3px 0 #000;
+  font-size: 56px !important;
+}
+
+.menu-content button {
+  background: linear-gradient(135deg, #00ff88 0%, #00cc66 100%);
+  color: #000;
+  border: 4px solid #00ff88;
+  transition: all 0.3s;
+  box-shadow: 0 6px 0 #008844;
+  margin-top: 20px;
+  font-weight: bold;
+}
+
+.menu-content button:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 0 #006633, 0 0 20px rgba(0, 255, 136, 0.5);
+  background: linear-gradient(135deg, #33ffaa 0%, #00ff88 100%);
+}
+
+.menu-content button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 0 #008844;
+}
+
+.menu-tips {
+  background: rgba(0, 255, 136, 0.1);
+  border: 2px solid #00ff88;
+  border-radius: 6px;
+  padding: 15px;
+  text-align: left;
+  line-height: 1.8;
+}
+}
+
+/* ═══ SPECIAL EFFECTS ══════════════════════════════════════════════════════ */
+.starvation-flash {
+  border-color: #ff0000 !important;
+  background: #440000 !important;
+}
+
+#survivalTimer {
+  font-size: 13px;
+  font-weight: bold;
+  color: #00ffcc;
+  text-shadow: 0 0 8px #00ffcc;
+  background: #001a15;
+  border: 2px solid #00ffcc;
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+
+#survivalTimer.danger {
+  color: #ff4444;
+  border-color: #ff4444;
+  text-shadow: 0 0 8px #ff4444;
+  background: #1a0000;
+  animation: pulse 0.5s infinite alternate;
+}
+
+@keyframes pulse {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.6;
+  }
+}
+
+#bossAlert {
+  display: none;
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(200, 0, 0, 0.9);
+  border: 3px solid #ff0000;
+  border-radius: 6px;
+  padding: 8px 20px;
+  font-size: 18px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 2px 2px 0 #000;
+  z-index: 50;
+  animation: bossShake 0.3s infinite alternate;
+}
+
+@keyframes bossShake {
+  from {
+    transform: translateX(-50%) rotate(-1deg);
+  }
+  to {
+    transform: translateX(-50%) rotate(1deg);
+  }
+}
+
+/* ═══ MOBILE CONTROLS ══════════════════════════════════════════════════════ */
+#joystick-zone {
+  display: none;
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  width: 120px;
+  height: 120px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  touch-action: none;
+  z-index: 100;
+}
+
+#joystick-knob {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 50px;
+  height: 50px;
+  background: rgba(255, 136, 0, 0.7);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  border: 2px solid #fff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+
+#sprint-btn {
+  display: none;
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 70px;
+  height: 70px;
+  background: rgba(0, 200, 255, 0.4);
+  border-radius: 50%;
+  border: 3px solid rgba(0, 255, 255, 0.6);
+  color: #fff;
+  font-size: 24px;
+  font-weight: bold;
+  line-height: 64px;
+  text-align: center;
+  touch-action: none;
+  z-index: 100;
+  user-select: none;
+}
+
+/* ═══ SIDEBAR ══════════════════════════════════════════════════════════════ */
+#sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 215px;
+  height: 615px;
+  overflow-y: auto;
+  padding-right: 4px;
+  flex-shrink: 0;
+}
+
+#sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+#sidebar::-webkit-scrollbar-thumb {
+  background: #ff8800;
+  border-radius: 4px;
+}
+
+.scard {
+  background: #0a0a10;
+  border: 2px solid #444;
+  border-radius: 6px;
+  padding: 12px;
+  font-size: 12px;
+}
+
+.scard h4 {
+  color: #ffcc00;
+  margin-bottom: 10px;
+  font-size: 13px;
+  border-bottom: 2px dashed #555;
+  padding-bottom: 6px;
+  text-align: center;
+  font-weight: bold;
+}
+
+/* ═══ CRAFT BUTTONS ════════════════════════════════════════════════════════ */
+.craft-btn {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  margin: 5px 0;
+  background: #222;
+  color: #ffcc44;
+  border: 2px solid #555;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: 'Courier New', monospace;
+  text-align: left;
+  font-weight: bold;
+}
+
+.craft-btn:hover:not(.maxed):not(.no) {
+  background: #443300;
+  border-color: #ffaa00;
+}
+
+.craft-btn.ok {
+  border-color: #00cc66;
+  color: #00ff88;
+}
+
+.craft-btn.maxed {
+  border-color: #4488ff;
+  color: #4488ff;
+  background: #001133;
+  cursor: default;
+  text-align: center;
+}
+
+.craft-btn.no {
+  border-color: #444;
+  color: #666;
+  cursor: not-allowed;
+  background: #111;
+}
+
+.tip {
+  color: #aaa;
+  font-size: 11px;
+  margin-top: 8px;
+  line-height: 1.4;
+  background: #000;
+  padding: 6px;
+  border-radius: 4px;
+  border: 1px solid #333;
+  text-align: center;
+}
+
+/* ═══ RESPONSIVE DESIGN ════════════════════════════════════════════════════ */
+@media (max-width: 1024px) {
+  #wrap {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  #sidebar {
+    width: 100%;
+    height: auto;
+    max-height: none;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .scard {
+    flex: 1;
+    min-width: 250px;
+  }
+}
+
+/* ═══ MOBILE SPECIFIC ══════════════════════════════════════════════════════ */
+body.is-mobile #joystick-zone {
+  display: block;
+}
+
+body.is-mobile #sprint-btn {
+  display: block;
+}
+
+body.is-mobile #desktop-hint {
+  display: none;
+}
