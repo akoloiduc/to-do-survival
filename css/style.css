@@ -41,6 +41,7 @@ body {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
   width: 100%;
   max-width: 832px;
+  position: relative; /* allow overlaying UI on top of canvas */
 }
 
 #canvasWrap {
@@ -64,12 +65,17 @@ body {
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  background: #0a0a10;
+  background: rgba(10,10,16,0.9);
   padding: 10px 15px;
   border-radius: 6px;
   border: 2px solid #444;
   align-items: center;
   flex-wrap: wrap;
+  position: absolute; /* overlay on top of canvas */
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  z-index: 60;
 }
 
 #stats {
