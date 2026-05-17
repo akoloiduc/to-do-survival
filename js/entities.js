@@ -59,9 +59,9 @@ class ResourceNode {
     this.hp -= amt; this.hitTimer = 5; const col = this.type === 'tree' ? '#8B4513' : this.type === 'rock' ? '#888' : '#00ffff';
     spawnParticles(this.x + 16, this.y + 16, col, 6); spawnText(this.x + 16, this.y, `-${Math.ceil(amt)}`, "#fff");
     if (this.hp <= 0) {
-      if (this.type === 'tree') { playerResources.wood += 8; spawnParticles(this.x + 16, this.y + 16, '#8B4513', 20); spawnText(this.x + 16, this.y - 10, "+8 Gỗ", "#e6994c"); }
-      if (this.type === 'rock') { playerResources.stone += 6; spawnParticles(this.x + 16, this.y + 16, '#888', 20); spawnText(this.x + 16, this.y - 10, "+6 Đá", "#b3b3b3"); }
-      if (this.type === 'ore') { playerResources.metal += 5; spawnParticles(this.x + 16, this.y + 16, '#00ffff', 20); spawnText(this.x + 16, this.y - 10, "+5 Kim", "#00ffff"); }
+      if (this.type === 'tree') { const amount = Math.ceil(8 * coreModifiers.resourceDropRate); playerResources.wood += amount; spawnParticles(this.x + 16, this.y + 16, '#8B4513', 20); spawnText(this.x + 16, this.y - 10, `+${amount} Gỗ`, "#e6994c"); }
+      if (this.type === 'rock') { const amount = Math.ceil(6 * coreModifiers.resourceDropRate); playerResources.stone += amount; spawnParticles(this.x + 16, this.y + 16, '#888', 20); spawnText(this.x + 16, this.y - 10, `+${amount} Đá`, "#b3b3b3"); }
+      if (this.type === 'ore') { const amount = Math.ceil(5 * coreModifiers.resourceDropRate); playerResources.metal += amount; spawnParticles(this.x + 16, this.y + 16, '#00ffff', 20); spawnText(this.x + 16, this.y - 10, `+${amount} Kim`, "#00ffff"); }
       score += 5; return true;
     } return false;
   }
@@ -185,7 +185,7 @@ const player = {
   },
   update() {
     if (this.hitTimer > 0) this.hitTimer--;
-    this.hunger = Math.max(0, this.hunger - 0.035); this.inShelter = shelter.col(this);
+    this.hunger = Math.max(0, this.hunger - 0.035 * coreModifiers.hungerModifier); this.inShelter = shelter.col(this);
     this.energy = Math.min(this.maxEnergy, this.energy + (this.inShelter ? 0.4 : 0.1));
     if (this.hunger <= 0) {
       this.health = Math.max(0, this.health - 0.15);
@@ -209,7 +209,7 @@ const player = {
       if (Math.hypot(ocx - cx, ocy - cy) <= sw.radius + (obj.width || obj.w || 0) / 2) {
         sw.hitSet.add(idPrefix);
         let dmg = 2;
-        if (obj instanceof Zombie || obj instanceof Animal) dmg = currentTool === 'sword' ? sw.damage : 5;
+        if (obj instanceof Zombie || obj instanceof Animal) dmg = currentTool === 'sword' ? sw.damage * coreModifiers.playerDamageMultiplier : 5;
         else if (obj instanceof ResourceNode) {
           if (obj.type === 'tree') dmg = currentTool === 'axe' ? 15 + player.tools.axe * 15 : 2;
           else if (obj.type === 'rock' || obj.type === 'ore') dmg = currentTool === 'pickaxe' ? 15 + player.tools.pickaxe * 15 : 2;
@@ -258,7 +258,7 @@ const player = {
       if (currentTool === 'pickaxe') { ctx.strokeStyle = glowColor; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(tipX, tipY, 8 + (pickaxeLevel - 1) * 1, ia - 0.8, ia + 0.8); ctx.stroke(); }
     }
   },
-  takeDamage(a) { this.health = Math.max(0, this.health - a); spawnParticles(this.x + 12, this.y + 12, '#ff0000', 10, true); spawnText(this.x + 12, this.y, `-${Math.ceil(a)}`, "#ff4444"); this.hitTimer = 5; },
+  takeDamage(a) { this.health = Math.max(0, this.health - a * coreModifiers.damageReduction); spawnParticles(this.x + 12, this.y + 12, '#ff0000', 10, true); spawnText(this.x + 12, this.y, `-${Math.ceil(a * coreModifiers.damageReduction)}`, "#ff4444"); this.hitTimer = 5; },
   eatCooked(cf) { if (this.hunger >= this.maxHunger - 5) { const hpGain = 20; this.health = Math.min(this.maxHealth, this.health + hpGain); spawnParticles(cf.x, cf.y, '#ff4444', 8); spawnText(this.x + 12, this.y, `+${hpGain} HP`, "#ff6666"); } else { this.hunger = Math.min(this.maxHunger, this.hunger + cf.hungerRestore); spawnParticles(cf.x, cf.y, '#ff9900', 8); spawnText(this.x + 12, this.y, `+${cf.hungerRestore} ĐÓI`, "#ff9900"); } },
   pickupMeat(m) { playerResources.meat++; spawnParticles(m.x, m.y, '#cc3333', 8); spawnText(m.x + 8, m.y - 5, "+1 Thịt", "#ff7777"); }
 };

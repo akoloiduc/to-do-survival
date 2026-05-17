@@ -15,14 +15,28 @@ let meatItems=[], cookedFoods=[], zombies=[], animals=[], resourceNodes=[], stru
 // Player resources & state
 let playerResources={wood:0,stone:0,metal:0,meat:0};
 
+// Core Modifiers (lõi bonus)
+let coreModifiers = {
+  resourceDropRate: 1.0,      // tỷ lệ rơi tài nguyên
+  hungerModifier: 1.0,        // hao đói
+  playerDamageMultiplier: 1.0, // sát thương tấn công
+  damageReduction: 1.0,       // giảm sát thương nhận
+  craftingCostMultiplier: 1.0, // chi phí craft
+  startHouseLevel: 1,         // nhà khởi đầu
+  startToolsLevel: 1,         // vũ khí khởi đầu
+  lootDropRate: 1.0,          // tỷ lệ loot
+  startResources: { wood: 0, stone: 0, metal: 0 }  // tài nguyên khởi đầu
+};
+
 // Global crafting modifiers - GIẢM CHI PHÍ KIM LOẠI XUỐNG 50%
 const METAL_COST_FACTOR = 0.5; 
 function adjustCost(raw) {
   if(!raw) return {wood:0,stone:0,metal:0};
+  const modifier = METAL_COST_FACTOR * coreModifiers.craftingCostMultiplier;
   return {
-    wood: raw.wood || 0,
-    stone: raw.stone || 0,
-    metal: Math.max(0, Math.floor((raw.metal || 0) * METAL_COST_FACTOR))
+    wood: Math.max(0, Math.floor((raw.wood || 0) * coreModifiers.craftingCostMultiplier)),
+    stone: Math.max(0, Math.floor((raw.stone || 0) * coreModifiers.craftingCostMultiplier)),
+    metal: Math.max(0, Math.floor((raw.metal || 0) * modifier))
   };
 }
 let wave=1,score=0,gameActive=true,keys={};
@@ -609,7 +623,7 @@ function spawnBoss() {
 
 function zombieDeath(z) {
   score += z.isBoss ? 50 : 10;
-  const dropChance = z.isBoss ? 1.0 : 0.35;
+  const dropChance = z.isBoss ? 1.0 : 0.35 * coreModifiers.lootDropRate;
   if (Math.random() < dropChance) {
     if (z.isBoss) {
       const loots = [
@@ -619,7 +633,7 @@ function zombieDeath(z) {
       ];
       const selected = loots.sort(() => 0.5 - Math.random()).slice(0, 2);
       selected.forEach(loot => {
-        const amount = Math.floor(Math.random() * (loot.max - loot.min + 1)) + loot.min;
+        const amount = Math.ceil((Math.floor(Math.random() * (loot.max - loot.min + 1)) + loot.min) * coreModifiers.lootDropRate);
         playerResources[loot.type] += amount;
         spawnText(z.x + z.width/2, z.y - 5, `+${amount} ${loot.icon}`, loot.color);
       });
@@ -895,8 +909,126 @@ window.addEventListener('keyup',e=>{keys[e.key]=false;});
 // ═══ SECTION 20: INITIALIZATION & START GAME ══════════════════════
 function startGame(){
   const menu = document.getElementById('mainMenu'); if(menu) menu.classList.add('hidden');
+  // Hiển thị modal chọn cores thay vì bắt đầu game ngay
+  showCoreSelection();
+}
+
+function showCoreSelection() {
+  const modal = document.getElementById('coreSelectionModal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    displayCoreOptions();
+  }
+}
+
+function displayCoreOptions() {
+  const options = coreSelector.generateOptions();
+  const container = document.getElementById('coreOptions');
+  if (!container) return;
+  
+  container.innerHTML = '';
+  options.forEach(core => {
+    const card = document.createElement('div');
+    card.className = 'core-card';
+    card.innerHTML = `
+      <div class="core-selected-badge">✓ CHỌN</div>
+      <div class="core-icon">${core.icon}</div>
+      <div class="core-name">${core.name}</div>
+      <div class="core-description">${core.description}</div>
+    `;
+    card.onclick = () => selectCore(core.id, card);
+    container.appendChild(card);
+  });
+}
+
+function selectCore(coreId, cardElement) {
+  const selected = coreSelector.select(coreId);
+  if (selected) {
+    // Bỏ chọn các card khác
+    document.querySelectorAll('.core-card').forEach(card => {
+      card.classList.remove('selected');
+    });
+    // Chọn card hiện tại
+    if (cardElement) {
+      cardElement.classList.add('selected');
+    }
+  }
+}
+
+function rerollCores() {
+  coreSelector.reroll();
+  displayCoreOptions();
+}
+
+function applyCoreModifiers() {
+  // Đảm bảo coreModifiers tồn tại
+  if (!coreModifiers) return;
+  
+  const selected = coreSelector.getSelected();
+  if (selected && selected.apply) {
+    selected.apply(); // gọi apply để set coreModifiers
+  }
+  
+  // Áp dụng tài nguyên khởi đầu
+  if (coreModifiers.startResources) {
+    playerResources.wood += coreModifiers.startResources.wood || 0;
+    playerResources.stone += coreModifiers.startResources.stone || 0;
+    playerResources.metal += coreModifiers.startResources.metal || 0;
+  }
+  
+  // Áp dụng level nhà khởi đầu
+  if (coreModifiers.startHouseLevel > 1) {
+    // Nâng cấp nhà trực tiếp (không tốn resource)
+    for (let i = 2; i <= coreModifiers.startHouseLevel; i++) {
+      shelter.level++;
+      shelter.maxHealth += 200;
+      shelter.health = shelter.maxHealth;
+      player.maxHealth += 25;
+      player.health = Math.min(player.health + 25, player.maxHealth);
+      shelterUpgs.house.level++;
+    }
+  }
+  
+  // Áp dụng level vũ khí khởi đầu
+  if (coreModifiers.startToolsLevel > 1) {
+    for (const tool of ['sword', 'axe', 'pickaxe']) {
+      if (playerUpgs[tool]) {
+        const targetLevel = coreModifiers.startToolsLevel;
+        while (playerUpgs[tool].level < targetLevel) {
+          playerUpgs[tool].level++;
+          if (tool === 'sword') { 
+            player.sword.damage += 15; 
+            player.sword.radius += 5; 
+          } else if (tool === 'axe') { 
+            player.tools.axe++; 
+          } else if (tool === 'pickaxe') { 
+            player.tools.pickaxe++; 
+          }
+        }
+      }
+    }
+  }
+}
+
+function startGameWithCore() {
+  // Áp dụng core modifiers
+  applyCoreModifiers();
+  
+  // Ẩn modal chọn cores
+  const modal = document.getElementById('coreSelectionModal');
+  if (modal) modal.classList.add('hidden');
+  
+  // Bắt đầu game
   if(!survivalStartTime) survivalStartTime = Date.now();
-  gameActive = true; refreshCraftBtns(); updateUI();
+  gameActive = true; 
+  refreshCraftBtns(); 
+  updateUI();
+  
+  // Hiển thị core được chọn
+  const selected = coreSelector.getSelected();
+  if (selected) {
+    spawnText(canvas.width / 2, 100, `${selected.icon} ${selected.name}`, "#00ff88");
+  }
 }
 
 spawnAnimals(4); spawnResourceNodes('tree', 7); spawnResourceNodes('rock', 4); spawnResourceNodes('ore', 2);

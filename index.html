@@ -145,6 +145,23 @@
         </div>
     </div>
 
+    <!-- Core Selection Modal (Sau khi bắt đầu) -->
+    <div id="coreSelectionModal" class="modal hidden">
+        <div class="modal-content core-selection-content">
+            <h1 style="font-size: 36px; margin-bottom: 10px;">🎯 CHỌN LÕI KHỞI ĐẦU</h1>
+            <p style="color: #ffcc44; margin-bottom: 20px; font-size: 14px;">Chọn 1 trong 3 lõi để tăng sức mạnh. Bạn có thể Roll lại để đổi lõi (miễn phí).</p>
+            
+            <div id="coreOptions" class="core-grid">
+                <!-- Core options will be generated here -->
+            </div>
+            
+            <div class="core-actions">
+                <button id="rerollBtn" onclick="rerollCores()" class="core-btn reroll-btn">🔄 ROLL LẠI</button>
+                <button id="confirmBtn" onclick="startGameWithCore()" class="core-btn" style="background: #00ff88; border-color: #00ffcc; color: #000; margin-left: 10px;">✓ BẮT ĐẦU GAME</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Game Over Modal -->
     <div id="gameOver" class="modal hidden">
         <div class="modal-content">
@@ -164,11 +181,11 @@
     <!-- Main Game Script -->
     <script src="js/game.js"></script>
     <script src="js/config.js"></script>
+    <script src="js/cores.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/entities.js"></script>
     <script src="js/structures.js"></script>
     <script src="js/ui.js"></script>
-    <script src="js/main.js"></script>
 </body>
 
 </html>
