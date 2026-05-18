@@ -39,7 +39,7 @@ function adjustCost(raw) {
     metal: Math.max(0, Math.floor((raw.metal || 0) * modifier))
   };
 }
-let wave=1,score=0,gameActive=true,keys={};
+let wave=1,score=0,gameActive=false,keys={};
 let lastIsNight=false,spawnTimer=0, frameCount=0;
 let selectedCraft=null, selectedStructure=null;
 let currentTool = 'sword';
@@ -808,7 +808,7 @@ function manageSpawns(){
 function updateNightSpawns(deltaMs) {
   if(!dayNight.isNight) return;
   nightSpawnInterval30s += deltaMs; nightBossInterval60s += deltaMs;
-  if(nightSpawnInterval30s >= 30000) { nightSpawnInterval30s -= 30000; nightSpawnWaveExtra(); }
+  if(nightSpawnInterval30s >= 30000) { nightSpawnInterval30s -= 30000; spawnNightWaveExtra(); }
   if(nightBossInterval60s >= 60000) { nightBossInterval60s -= 60000; spawnBoss(); }
 }
 
@@ -849,6 +849,13 @@ function update(){
 
 // ═══ SECTION 18: RENDERING & DRAW ═════════════════════════════════
 function draw(){
+  if(!gameActive){
+    ctx.fillStyle='#446b33'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle='#00ffcc'; ctx.font='bold 22px Courier New'; ctx.textAlign='center';
+    ctx.fillText('🎯 Chọn lõi để bắt đầu game...', canvas.width/2, canvas.height/2);
+    return;
+  }
   ctx.fillStyle='#446b33'; ctx.fillRect(0,0,canvas.width,canvas.height);
   ctx.fillStyle='#4c753a'; for(let x=0;x<canvas.width;x+=GRID*2){ for(let y=0;y<canvas.height;y+=GRID*2){ ctx.fillRect(x,y,GRID,GRID); ctx.fillRect(x+GRID,y+GRID,GRID,GRID); } }
   ctx.fillStyle='#5a8a44'; mapDecor.forEach(d => { if(d.type === 'grass') { ctx.fillRect(d.x, d.y, 4, 12); ctx.fillRect(d.x-4, d.y+4, 4, 8); ctx.fillRect(d.x+4, d.y+4, 4, 8); } else { ctx.fillStyle='#ffaa00'; ctx.fillRect(d.x, d.y, 6, 6); ctx.fillStyle='#5a8a44'; } });
@@ -917,17 +924,17 @@ function showCoreSelection() {
   const modal = document.getElementById('coreSelectionModal');
   if (modal) {
     modal.classList.remove('hidden');
+    coreSelector.generateOptions();
     displayCoreOptions();
   }
 }
 
 function displayCoreOptions() {
-  const options = coreSelector.generateOptions();
   const container = document.getElementById('coreOptions');
   if (!container) return;
   
   container.innerHTML = '';
-  options.forEach(core => {
+  coreSelector.availableCores.forEach(core => {
     const card = document.createElement('div');
     card.className = 'core-card';
     card.innerHTML = `
@@ -939,6 +946,23 @@ function displayCoreOptions() {
     card.onclick = () => selectCore(core.id, card);
     container.appendChild(card);
   });
+
+  // Cập nhật trạng thái nút roll
+  const rerollBtn = document.getElementById('rerollBtn');
+  if (rerollBtn) {
+    const left = coreSelector.getRollsLeft();
+    if (left > 0) {
+      rerollBtn.disabled = false;
+      rerollBtn.style.opacity = '1';
+      rerollBtn.style.cursor = 'pointer';
+      rerollBtn.textContent = `🔄 ROLL LẠI (còn ${left} lần)`;
+    } else {
+      rerollBtn.disabled = true;
+      rerollBtn.style.opacity = '0.4';
+      rerollBtn.style.cursor = 'not-allowed';
+      rerollBtn.textContent = `🔄 HẾT LƯỢT ROLL`;
+    }
+  }
 }
 
 function selectCore(coreId, cardElement) {
@@ -956,6 +980,7 @@ function selectCore(coreId, cardElement) {
 }
 
 function rerollCores() {
+  if (!coreSelector.canReroll()) return;
   coreSelector.reroll();
   displayCoreOptions();
 }
@@ -1011,6 +1036,30 @@ function applyCoreModifiers() {
 }
 
 function startGameWithCore() {
+  // Bắt buộc phải chọn lõi trước khi bắt đầu
+  if (!coreSelector.getSelected()) {
+    // Flash cảnh báo
+    const container = document.getElementById('coreOptions');
+    if (container) {
+      container.style.outline = '3px solid #ff3333';
+      container.style.borderRadius = '8px';
+      setTimeout(() => { container.style.outline = 'none'; }, 800);
+    }
+    const confirmBtn = document.getElementById('confirmBtn');
+    if (confirmBtn) {
+      const orig = confirmBtn.textContent;
+      confirmBtn.textContent = '⚠️ Hãy chọn 1 lõi!';
+      confirmBtn.style.background = '#ff3333';
+      confirmBtn.style.borderColor = '#ff0000';
+      setTimeout(() => {
+        confirmBtn.textContent = orig;
+        confirmBtn.style.background = '#00ff88';
+        confirmBtn.style.borderColor = '#00ffcc';
+      }, 1200);
+    }
+    return;
+  }
+
   // Áp dụng core modifiers
   applyCoreModifiers();
   
@@ -1020,6 +1069,8 @@ function startGameWithCore() {
   
   // Bắt đầu game
   if(!survivalStartTime) survivalStartTime = Date.now();
+  dayNight.startTime = Date.now(); // Reset chu kỳ ngày/đêm từ đầu
+  lastUpdateTime = Date.now();     // Reset delta time để tránh spike đói lớn
   gameActive = true; 
   refreshCraftBtns(); 
   updateUI();

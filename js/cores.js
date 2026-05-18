@@ -10,7 +10,7 @@ const ALL_CORES = [
     description: 'Tăng 50% tỷ lệ xuất hiện của các tài nguyên',
     icon: '💎',
     apply: () => {
-      if (window.coreModifiers) window.coreModifiers.resourceDropRate = 1.5;
+      if (coreModifiers) coreModifiers.resourceDropRate = 1.5;
     }
   },
   {
@@ -19,7 +19,7 @@ const ALL_CORES = [
     description: 'Giảm độ hao đói xuống một nửa',
     icon: '🍖',
     apply: () => {
-      if (window.coreModifiers) window.coreModifiers.hungerModifier = 0.5;
+      if (coreModifiers) coreModifiers.hungerModifier = 0.5;
     }
   },
   {
@@ -28,9 +28,9 @@ const ALL_CORES = [
     description: 'Tăng sát thương lên quái +50%, giảm sát thương nhận vào -30%',
     icon: '⚔️',
     apply: () => {
-      if (window.coreModifiers) {
-        window.coreModifiers.playerDamageMultiplier = 1.5;
-        window.coreModifiers.damageReduction = 0.7;
+      if (coreModifiers) {
+        coreModifiers.playerDamageMultiplier = 1.5;
+        coreModifiers.damageReduction = 0.7;
       }
     }
   },
@@ -40,7 +40,7 @@ const ALL_CORES = [
     description: 'Giảm 50% yêu cầu nguyên liệu cho công trình, vũ khí và công cụ',
     icon: '🔧',
     apply: () => {
-      if (window.coreModifiers) window.coreModifiers.craftingCostMultiplier = 0.5;
+      if (coreModifiers) coreModifiers.craftingCostMultiplier = 0.5;
     }
   },
   {
@@ -49,7 +49,7 @@ const ALL_CORES = [
     description: 'Khởi đầu với nhà cấp 3',
     icon: '🏰',
     apply: () => {
-      if (window.coreModifiers) window.coreModifiers.startHouseLevel = 3;
+      if (coreModifiers) coreModifiers.startHouseLevel = 3;
     }
   },
   {
@@ -58,7 +58,7 @@ const ALL_CORES = [
     description: 'Quái và Boss tỷ lệ rơi đồ tăng 100%',
     icon: '🎁',
     apply: () => {
-      if (window.coreModifiers) window.coreModifiers.lootDropRate = 2.0;
+      if (coreModifiers) coreModifiers.lootDropRate = 2.0;
     }
   },
   {
@@ -67,7 +67,7 @@ const ALL_CORES = [
     description: 'Khởi đầu với 100 gỗ, 50 đá, 50 kim loại',
     icon: '📦',
     apply: () => {
-      if (window.coreModifiers) window.coreModifiers.startResources = { wood: 100, stone: 50, metal: 50 };
+      if (coreModifiers) coreModifiers.startResources = { wood: 100, stone: 50, metal: 50 };
     }
   },
   {
@@ -76,9 +76,9 @@ const ALL_CORES = [
     description: 'Khởi đầu với nhà và vũ khí và công cụ cấp 2',
     icon: '🎖️',
     apply: () => {
-      if (window.coreModifiers) {
-        window.coreModifiers.startHouseLevel = 2;
-        window.coreModifiers.startToolsLevel = 2;
+      if (coreModifiers) {
+        coreModifiers.startHouseLevel = 2;
+        coreModifiers.startToolsLevel = 2;
       }
     }
   }
@@ -92,18 +92,35 @@ class CoreSelector {
     this.rerollCount = 0;
   }
 
-  // Lấy 3 cores random (không lặp)
+  // Lấy 3 cores random lần đầu (reset rerollCount)
   generateOptions() {
-    const shuffled = [...ALL_CORES].sort(() => Math.random() - 0.5);
-    this.availableCores = shuffled.slice(0, 3);
+    this.selectedCore = null;
     this.rerollCount = 0;
+    this._shuffle();
     return this.availableCores;
   }
 
-  // Reroll - lấy 3 cores khác
+  // Shuffle nội bộ không reset count
+  _shuffle() {
+    const shuffled = [...ALL_CORES].sort(() => Math.random() - 0.5);
+    this.availableCores = shuffled.slice(0, 3);
+  }
+
+  // Reroll - lấy 3 cores khác (tối đa 6 lần)
+  canReroll() {
+    return this.rerollCount < 6;
+  }
+
+  getRollsLeft() {
+    return 6 - this.rerollCount;
+  }
+
   reroll() {
-    this.generateOptions();
+    if (!this.canReroll()) return false;
     this.rerollCount++;
+    this.selectedCore = null;
+    this._shuffle();
+    return true;
   }
 
   // Chọn một core
